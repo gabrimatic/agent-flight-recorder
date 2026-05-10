@@ -82,13 +82,16 @@ def matching_zone(path: str, config: dict[str, Any]) -> list[dict[str, Any]]:
     return zones
 
 
-def added_diff_lines(diff_text: str) -> list[str]:
-    result: list[str] = []
+def added_diff_lines(diff_text: str) -> list[tuple[str | None, str]]:
+    result: list[tuple[str | None, str]] = []
+    current_path: str | None = None
     for line in diff_text.splitlines():
-        if line.startswith("+++"):
+        if line.startswith("+++ "):
+            path = line[4:].strip()
+            current_path = path[2:] if path.startswith("b/") else path
             continue
         if line.startswith("+"):
-            result.append(line[1:])
+            result.append((current_path, line[1:]))
     return result
 
 
@@ -285,14 +288,32 @@ def analyze_manifest(root: Path, manifest: dict[str, Any], config: dict[str, Any
         )
 
     diff_lines = added_diff_lines(diff_text)
+    added_paths = [
+        str(item.get("path", ""))
+        for item in changes
+        if item.get("status") == "A" and item.get("path") and not item.get("binary")
+    ]
+    for path in added_paths:
+        full_path = root / path
+        if not full_path.exists() or not full_path.is_file() or full_path.is_symlink():
+            continue
+        try:
+            text = read_text_lossy(full_path, max_bytes=max_scan_bytes)
+        except OSError:
+            continue
+        for line in text.splitlines():
+            diff_lines.append((path, line))
     destructive_hits: list[str] = []
-    for line in diff_lines:
+    for path, line in diff_lines:
         for pid, pattern, title in DESTRUCTIVE_PATTERNS:
             if pattern.search(line):
                 snippet = line.strip()
                 if len(snippet) > 160:
                     snippet = snippet[:157] + "..."
-                destructive_hits.append(f"{title}: `{snippet}`")
+                location = f"{path}: " if path else ""
+                hit = f"{location}{title}: `{snippet}`"
+                if hit not in destructive_hits:
+                    destructive_hits.append(hit)
     if destructive_hits:
         findings.append(
             finding(

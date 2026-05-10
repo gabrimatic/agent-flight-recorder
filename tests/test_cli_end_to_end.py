@@ -103,6 +103,17 @@ class CliEndToEndTests(unittest.TestCase):
         ids = {item["id"] for item in manifest["risk"]["findings"]}
         self.assertIn("dangerous-added-lines", ids)
 
+    def test_analyze_base_ref_scans_untracked_added_files_for_dangerous_lines(self) -> None:
+        run([sys.executable, str(AFR), "init"], self.repo)
+        (self.repo / "migration.sql").write_text("DROP TABLE users;\n", encoding="utf-8")
+        proc = run([sys.executable, str(AFR), "analyze", "--base-ref", "HEAD"], self.repo, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        manifest = json.loads((self.repo / ".agent-flight" / "manifest.json").read_text(encoding="utf-8"))
+        findings = manifest["risk"]["findings"]
+        dangerous = [item for item in findings if item["id"] == "dangerous-added-lines"]
+        self.assertTrue(dangerous)
+        self.assertIn("migration.sql", "\n".join(dangerous[0]["evidence"]))
+
 
 if __name__ == "__main__":
     unittest.main()

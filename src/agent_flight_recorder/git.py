@@ -160,7 +160,7 @@ def parse_status_porcelain_z(raw: str) -> list[dict[str, str]]:
             continue
         status = entry[:2]
         path = entry[3:]
-        code = status.strip()[:1] or "?"
+        code = "A" if status == "??" else (status.strip()[:1] or "?")
         if status.startswith("R") or status.startswith("C"):
             if i < len(tokens):
                 old_path = tokens[i]
