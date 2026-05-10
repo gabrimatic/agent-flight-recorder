@@ -1,0 +1,59 @@
+name: Agent Flight Recorder
+description: Analyze coding-agent code changes and fail pull requests that exceed configured risk gates.
+author: Soroush Yousefpour / Gabrimatic
+
+inputs:
+  base_ref:
+    description: Git ref to diff against. Defaults to origin/${{ github.base_ref }} on pull requests, then Agent Flight Recorder fallback refs.
+    required: false
+    default: ""
+  max_score:
+    description: Fail when risk score is greater than this value.
+    required: false
+    default: "79"
+  require_tests_for_high_risk:
+    description: Fail high/critical changes if no successful test command was recorded in the manifest.
+    required: false
+    default: "false"
+  require_command_log:
+    description: Fail changed manifests that have no recorded command log.
+    required: false
+    default: "false"
+  output:
+    description: Markdown report output path.
+    required: false
+    default: ".agent-flight/pr-report.md"
+
+runs:
+  using: composite
+  steps:
+    - name: Run Agent Flight analysis
+      shell: bash
+      run: |
+        set -euo pipefail
+        BASE_REF="${{ inputs.base_ref }}"
+        if [ -z "$BASE_REF" ] && [ -n "${{ github.base_ref }}" ]; then
+          BASE_REF="origin/${{ github.base_ref }}"
+        fi
+
+        AFR_BIN="$GITHUB_ACTION_PATH/afr.py"
+        python "$AFR_BIN" init || true
+
+        if [ -n "$BASE_REF" ]; then
+          python "$AFR_BIN" analyze --base-ref "$BASE_REF" --output "${{ inputs.output }}"
+        else
+          python "$AFR_BIN" analyze --output "${{ inputs.output }}"
+        fi
+
+        VERIFY_ARGS=(--manifest .agent-flight/manifest.json --max-score "${{ inputs.max_score }}")
+        if [ "${{ inputs.require_tests_for_high_risk }}" = "true" ]; then
+          VERIFY_ARGS+=(--require-tests-for-high-risk)
+        fi
+        if [ "${{ inputs.require_command_log }}" = "true" ]; then
+          VERIFY_ARGS+=(--require-command-log)
+        fi
+        python "$AFR_BIN" verify "${VERIFY_ARGS[@]}"
+
+branding:
+  icon: activity
+  color: blue
