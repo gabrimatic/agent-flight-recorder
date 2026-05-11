@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -21,6 +23,22 @@ class SnapshotTests(unittest.TestCase):
             by_path = {item["path"]: item["status"] for item in changes}
             self.assertEqual(by_path["a.py"], "M")
             self.assertEqual(by_path["b.py"], "A")
+
+    def test_truncated_hashes_still_detect_same_size_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "large.txt"
+            config = default_config()
+            config["max_hash_bytes"] = 4
+            path.write_text("prefix-before", encoding="utf-8")
+            before = inventory(root, config)
+            path.write_text("prefix-after!", encoding="utf-8")
+            changed_time = time.time() + 10
+            os.utime(path, (changed_time, changed_time))
+            after = inventory(root, config)
+            changes = compare_inventories(before, after)
+            by_path = {item["path"]: item["status"] for item in changes}
+            self.assertEqual(by_path["large.txt"], "M")
 
     def test_exclude_glob(self) -> None:
         self.assertTrue(path_matches_any("node_modules/pkg/index.js", ["node_modules/**"]))

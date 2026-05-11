@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
-from .secrets import redact_text
+from .secrets import redact_argv, redact_text
 from .utils import atomic_write_text, iso_now, normalize_command
 
 
@@ -40,6 +41,32 @@ def _spawn_error_message(argv: list[str], exc: OSError) -> tuple[int, str]:
     return 1, f"afr: could not start command {command}: {exc}\n"
 
 
+def _read_pipe(stream: BinaryIO, limit: int, result: dict[str, Any]) -> None:
+    data = bytearray()
+    total = 0
+    while True:
+        chunk = stream.read(64 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if len(data) < limit:
+            remaining = limit - len(data)
+            data.extend(chunk[:remaining])
+    result["data"] = bytes(data)
+    result["truncated"] = total > limit
+
+
+def _decode_captured_output(data: bytes, *, stream_name: str, truncated: bool, limit: int, redact_output: bool) -> str:
+    text = data.decode("utf-8", errors="replace")
+    if redact_output:
+        text = redact_text(text)
+    if truncated:
+        if text and not text.endswith("\n"):
+            text += "\n"
+        text += f"[afr: {stream_name} truncated after {limit} bytes]\n"
+    return text
+
+
 def run_command(
     *,
     root: Path,
@@ -47,6 +74,7 @@ def run_command(
     argv: list[str],
     capture_output: bool,
     redact_output: bool,
+    max_output_bytes: int = 1_000_000,
 ) -> dict[str, Any]:
     if not argv:
         raise ValueError("argv must not be empty")
@@ -55,10 +83,11 @@ def run_command(
     stdout_path = commands_dir / f"{command_id}.stdout.log"
     stderr_path = commands_dir / f"{command_id}.stderr.log"
     started_at = iso_now()
+    recorded_argv = redact_argv(argv)
     record: dict[str, Any] = {
         "id": command_id,
-        "argv": argv,
-        "command": normalize_command(argv),
+        "argv": recorded_argv,
+        "command": normalize_command(recorded_argv),
         "cwd": str(root),
         "started_at": started_at,
         "ended_at": None,
@@ -66,22 +95,45 @@ def run_command(
         "capture_output": capture_output,
         "stdout_path": stdout_path.relative_to(session_dir).as_posix(),
         "stderr_path": stderr_path.relative_to(session_dir).as_posix(),
+        "stdout_truncated": False,
+        "stderr_truncated": False,
     }
 
     if capture_output:
         try:
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 argv,
                 cwd=str(root),
                 env=_prepare_env(),
-                text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                check=False,
             )
-            stdout = redact_text(proc.stdout) if redact_output else proc.stdout
-            stderr = redact_text(proc.stderr) if redact_output else proc.stderr
+            stdout_result: dict[str, Any] = {}
+            stderr_result: dict[str, Any] = {}
+            stdout_thread = threading.Thread(target=_read_pipe, args=(proc.stdout, max_output_bytes, stdout_result))
+            stderr_thread = threading.Thread(target=_read_pipe, args=(proc.stderr, max_output_bytes, stderr_result))
+            stdout_thread.start()
+            stderr_thread.start()
+            proc.wait()
+            stdout_thread.join()
+            stderr_thread.join()
             record["exit_code"] = proc.returncode
+            record["stdout_truncated"] = bool(stdout_result.get("truncated"))
+            record["stderr_truncated"] = bool(stderr_result.get("truncated"))
+            stdout = _decode_captured_output(
+                stdout_result.get("data", b""),
+                stream_name="stdout",
+                truncated=bool(stdout_result.get("truncated")),
+                limit=max_output_bytes,
+                redact_output=redact_output,
+            )
+            stderr = _decode_captured_output(
+                stderr_result.get("data", b""),
+                stream_name="stderr",
+                truncated=bool(stderr_result.get("truncated")),
+                limit=max_output_bytes,
+                redact_output=redact_output,
+            )
         except OSError as exc:
             exit_code, stderr = _spawn_error_message(argv, exc)
             stdout = ""

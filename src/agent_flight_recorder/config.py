@@ -15,6 +15,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "schema_version": "1.0",
     "max_hash_bytes": 10_485_760,
     "max_text_scan_bytes": 2_000_000,
+    "max_command_output_bytes": 1_000_000,
     "redact_command_output": True,
     "exclude_globs": [
         ".git/**",
@@ -304,6 +305,9 @@ def validate_config(config: dict[str, Any]) -> None:
         raise ConfigError("Config key must be an object: risk_thresholds")
     _require_int(config, "max_hash_bytes", minimum=1)
     _require_int(config, "max_text_scan_bytes", minimum=1)
+    _require_int(config, "max_command_output_bytes", minimum=1)
+    if not isinstance(config.get("redact_command_output"), bool):
+        raise ConfigError("Config key must be a boolean: redact_command_output")
     for key, value in config["risk_thresholds"].items():
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             raise ConfigError(f"Risk threshold must be a non-negative integer: {key}")

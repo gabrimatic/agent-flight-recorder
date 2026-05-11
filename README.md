@@ -28,9 +28,9 @@ It is built for the new workflow where a developer says “let the agent impleme
 The manifest records:
 
 - session id, branch, commit, start/end time
-- command lines run through the recorder
+- redacted command lines run through the recorder
 - command exit codes
-- stdout/stderr logs, redacted by default
+- stdout/stderr logs, redacted by default and bounded by a configurable byte limit
 - changed files
 - binary files
 - dependency manifest changes
@@ -142,6 +142,8 @@ afr start --interactive -- agent-cli
 ```
 
 When `--interactive` is used, the command inherits the terminal. The command line and exit code are still recorded, but stdout/stderr are not captured.
+
+Recorded command metadata is redacted before it is written to the manifest. Secret-looking flag values such as `--api-key <value>`, `--token=<value>`, `PASSWORD=<value>`, and common key formats are replaced in reports and manifests. Captured stdout and stderr are capped by `max_command_output_bytes` in `.agent-flight/config.json`; truncated logs include an explicit `[afr: ... truncated ...]` marker.
 
 ### `afr run`
 

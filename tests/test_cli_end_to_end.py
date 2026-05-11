@@ -64,6 +64,13 @@ class CliEndToEndTests(unittest.TestCase):
         self.assertEqual(manifest["session_id"], "manual-test")
         self.assertIsNotNone(manifest["ended_at"])
 
+    def test_session_id_cannot_escape_sessions_directory(self) -> None:
+        run([sys.executable, str(AFR), "init"], self.repo)
+        proc = run([sys.executable, str(AFR), "start", "--session-id", "../../escaped"], self.repo, check=False)
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("Invalid session id", proc.stderr)
+        self.assertFalse((self.repo / "escaped").exists())
+
     def test_manual_session_keeps_distinct_command_logs(self) -> None:
         run([sys.executable, str(AFR), "init"], self.repo)
         run([sys.executable, str(AFR), "start", "--session-id", "multi-command"], self.repo)
@@ -85,6 +92,52 @@ class CliEndToEndTests(unittest.TestCase):
         self.assertEqual(manifest["commands"][0]["exit_code"], 127)
         stderr_path = self.repo / ".agent-flight" / "sessions" / manifest["session_id"] / manifest["commands"][0]["stderr_path"]
         self.assertIn("command not found", stderr_path.read_text(encoding="utf-8"))
+
+    def test_command_metadata_redacts_secret_arguments(self) -> None:
+        run([sys.executable, str(AFR), "init"], self.repo)
+        secret = "sk" + "-" + ("a" * 30)
+        proc = run(
+            [
+                sys.executable,
+                str(AFR),
+                "start",
+                "--",
+                sys.executable,
+                "-c",
+                "print('ok')",
+                "--api-key",
+                secret,
+            ],
+            self.repo,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        manifest = json.loads((self.repo / ".agent-flight" / "manifest.json").read_text(encoding="utf-8"))
+        manifest_text = json.dumps(manifest)
+        self.assertNotIn(secret, manifest_text)
+        self.assertIn("[REDACTED]", manifest_text)
+        self.assertIn("--api-key", manifest["commands"][0]["argv"])
+
+    def test_captured_output_is_bounded_and_marked_when_truncated(self) -> None:
+        run([sys.executable, str(AFR), "init"], self.repo)
+        config_path = self.repo / ".agent-flight" / "config.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["max_command_output_bytes"] = 32
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        script = "import sys; sys.stdout.write('x' * 100); sys.stderr.write('y' * 100)"
+        proc = run([sys.executable, str(AFR), "start", "--", sys.executable, "-c", script], self.repo, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        manifest = json.loads((self.repo / ".agent-flight" / "manifest.json").read_text(encoding="utf-8"))
+        command = manifest["commands"][0]
+        self.assertTrue(command["stdout_truncated"])
+        self.assertTrue(command["stderr_truncated"])
+        session_dir = self.repo / ".agent-flight" / "sessions" / manifest["session_id"]
+        stdout = (session_dir / command["stdout_path"]).read_text(encoding="utf-8")
+        stderr = (session_dir / command["stderr_path"]).read_text(encoding="utf-8")
+        self.assertIn("[afr: stdout truncated after 32 bytes]", stdout)
+        self.assertIn("[afr: stderr truncated after 32 bytes]", stderr)
+        self.assertNotIn("x" * 40, stdout)
+        self.assertNotIn("y" * 40, stderr)
 
     def test_analyze_and_verify(self) -> None:
         run([sys.executable, str(AFR), "init"], self.repo)

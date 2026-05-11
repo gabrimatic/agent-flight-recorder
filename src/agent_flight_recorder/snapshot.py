@@ -82,20 +82,30 @@ def inventory(root: Path, config: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def compare_inventories(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    def change_record(path: str, status: str, item: dict[str, Any]) -> dict[str, Any]:
+        record = {"path": path, "status": status, "size": item.get("size", 0), "binary": item.get("binary", False)}
+        if item.get("hash_truncated"):
+            record["hash_truncated"] = True
+        return record
+
+    def signature(item: dict[str, Any]) -> tuple[Any, ...]:
+        parts: list[Any] = [item.get("sha256"), item.get("size"), item.get("target"), item.get("type"), item.get("mode")]
+        if item.get("hash_truncated"):
+            parts.append(item.get("mtime_ns"))
+        return tuple(parts)
+
     paths = sorted(set(before) | set(after))
     changes: list[dict[str, Any]] = []
     for path in paths:
         b = before.get(path)
         a = after.get(path)
         if b is None and a is not None:
-            changes.append({"path": path, "status": "A", "size": a.get("size", 0), "binary": a.get("binary", False)})
+            changes.append(change_record(path, "A", a))
         elif b is not None and a is None:
-            changes.append({"path": path, "status": "D", "size": b.get("size", 0), "binary": b.get("binary", False)})
+            changes.append(change_record(path, "D", b))
         elif b is not None and a is not None:
-            before_sig = (b.get("sha256"), b.get("size"), b.get("target"), b.get("type"), b.get("mode"))
-            after_sig = (a.get("sha256"), a.get("size"), a.get("target"), a.get("type"), a.get("mode"))
-            if before_sig != after_sig:
-                changes.append({"path": path, "status": "M", "size": a.get("size", 0), "binary": a.get("binary", False)})
+            if signature(b) != signature(a):
+                changes.append(change_record(path, "M", a))
     return changes
 
 

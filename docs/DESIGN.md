@@ -28,6 +28,10 @@ Main modules:
 
 `afr start -- <command>` captures before-inventory, runs one command, captures after-inventory, runs risk analysis, and exits with the child command exit code.
 
+Command metadata is stored in a publishable form. `argv` and the normalized command string are redacted before they are written to manifests or markdown reports. The original argv is only used to launch the child process.
+
+Captured stdout and stderr are drained through bounded in-memory buffers, redacted, then written to log files. The default cap is `max_command_output_bytes` per stream. This prevents large command output from exhausting memory and makes truncation visible in the logs.
+
 ### Analysis
 
 `afr analyze` does not need a before-inventory. It asks git for the diff against a base ref and runs the risk engine. This is the right mode for GitHub Actions.
@@ -47,7 +51,7 @@ The first version should be trusted because it is predictable. A future hosted p
 The manifest is JSON and intentionally human-readable. Important sections:
 
 - `repository`: branch, head, before/after status.
-- `commands`: argv, normalized command string, exit code, timestamps, output paths.
+- `commands`: redacted argv, redacted normalized command string, exit code, timestamps, output paths, truncation flags.
 - `files.changed`: path, status, size, binary marker.
 - `risk`: score, level, findings, summary.
 - `reports`: generated report paths.
@@ -62,3 +66,5 @@ The manifest is JSON and intentionally human-readable. Important sections:
 ## Known constraints
 
 `afr` cannot observe commands run outside the recorder. This is deliberate and documented. Recording shells transparently is possible but invasive, shell-specific, and fragile.
+
+Local inventory hashes large files only up to `max_hash_bytes` for performance. For files whose hashes are truncated, inventory comparison also uses modification time so same-size edits beyond the hash cap are still surfaced for review.

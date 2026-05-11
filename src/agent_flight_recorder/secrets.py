@@ -37,6 +37,23 @@ SECRET_PATTERNS: list[SecretPattern] = [
 ]
 
 
+SENSITIVE_ARG_WORDS = {
+    "api_key",
+    "apikey",
+    "auth",
+    "authorization",
+    "client_secret",
+    "credential",
+    "credentials",
+    "key",
+    "passwd",
+    "password",
+    "pwd",
+    "secret",
+    "token",
+}
+
+
 def mask(value: str) -> str:
     if len(value) <= 8:
         return "[REDACTED]"
@@ -47,6 +64,57 @@ def redact_text(text: str) -> str:
     redacted = text
     for pattern in SECRET_PATTERNS:
         redacted = pattern.regex.sub(lambda match: mask(match.group(0)), redacted)
+    return redacted
+
+
+def _option_name(token: str) -> str:
+    name = token.split("=", 1)[0]
+    name = name.lstrip("-").strip()
+    return re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_").lower()
+
+
+def _looks_sensitive_option(token: str) -> bool:
+    name = _option_name(token)
+    if not name:
+        return False
+    if name in SENSITIVE_ARG_WORDS:
+        return True
+    return any(part in SENSITIVE_ARG_WORDS for part in name.split("_"))
+
+
+def redact_argv(argv: list[str]) -> list[str]:
+    """Return argv suitable for manifests and reports.
+
+    The child process still receives the original argv. Only the recorded
+    metadata is redacted.
+    """
+    redacted: list[str] = []
+    redact_next = False
+    for raw in argv:
+        token = str(raw)
+        if redact_next:
+            redacted.append("[REDACTED]")
+            redact_next = False
+            continue
+        if token.startswith("-") and "=" in token:
+            name, _value = token.split("=", 1)
+            if _looks_sensitive_option(name):
+                redacted.append(f"{name}=[REDACTED]")
+            else:
+                redacted.append(redact_text(token))
+            continue
+        if token.startswith("--") and _looks_sensitive_option(token):
+            redacted.append(token)
+            redact_next = True
+            continue
+        if "=" in token:
+            name, _value = token.split("=", 1)
+            if _looks_sensitive_option(name):
+                redacted.append(f"{name}=[REDACTED]")
+            else:
+                redacted.append(redact_text(token))
+            continue
+        redacted.append(redact_text(token))
     return redacted
 
 

@@ -204,6 +204,7 @@ def run_wrapped_session(
         argv=argv,
         capture_output=capture_output,
         redact_output=bool(config.get("redact_command_output", True)),
+        max_output_bytes=int(config.get("max_command_output_bytes", 1_000_000)),
     )
     manifest["commands"].append(command_record)
     after = inventory(root, config)
@@ -236,6 +237,7 @@ def run_command_in_active_session(root: Path, *, argv: list[str], capture_output
         argv=argv,
         capture_output=capture_output,
         redact_output=bool(config.get("redact_command_output", True)),
+        max_output_bytes=int(config.get("max_command_output_bytes", 1_000_000)),
     )
     manifest.setdefault("commands", []).append(record)
     save_manifest(root, manifest, update_latest=True)
