@@ -56,6 +56,26 @@ The manifest is JSON and intentionally readable. Important sections:
 - `risk`: score, level, findings, summary.
 - `reports`: generated report paths.
 
+## User-facing output
+
+The CLI prints short status lines for start, stop, analyze, verify, and report writes. The markdown report is the main review UI.
+
+Report rendering keeps the page scannable:
+
+- session and repository metadata at the top
+- counts before details
+- findings sorted by severity
+- command exits and log paths grouped together
+- changed files listed with status, size, and binary marker
+
+Command stdout and stderr stay in separate redacted log files. The report links to those log paths instead of embedding large output.
+
+## Risk scoring
+
+The score is deterministic. It sums finding scores, clamps the result to 0-100, and applies the strongest severity floor.
+
+A medium finding makes the manifest at least medium risk, a high finding makes it at least high risk, and a critical finding makes it at least critical risk. This prevents low numerical scores from hiding high-severity findings such as failed recorded commands.
+
 ## Exit codes
 
 - `0`: success.

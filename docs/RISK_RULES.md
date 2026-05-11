@@ -11,6 +11,8 @@ The risk engine is deterministic. It surfaces review risk; it does not prove cor
 
 Set thresholds in `.agent-flight/config.json`.
 
+The final score is the higher of the summed finding score and the strongest finding severity floor. A medium finding makes the manifest at least medium risk, a high finding makes it at least high risk, and a critical finding makes it at least critical risk.
+
 ## Built-in findings
 
 ### `risk-zone-auth`

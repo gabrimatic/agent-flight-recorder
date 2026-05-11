@@ -59,6 +59,19 @@ def risk_level(score: int, thresholds: dict[str, Any]) -> str:
     return "low"
 
 
+def severity_score_floor(findings: list[dict[str, Any]], thresholds: dict[str, Any]) -> int:
+    floor = 0
+    for item in findings:
+        severity = str(item.get("severity", "info"))
+        if severity == "critical":
+            floor = max(floor, int(thresholds.get("critical", 80)))
+        elif severity == "high":
+            floor = max(floor, int(thresholds.get("high", 51)))
+        elif severity in {"medium", "warning"}:
+            floor = max(floor, int(thresholds.get("medium", 21)))
+    return floor
+
+
 def is_test_file(path: str, config: dict[str, Any]) -> bool:
     return path_matches_any(path, list(config.get("test_file_globs", [])))
 
@@ -190,9 +203,9 @@ def analyze_manifest(root: Path, manifest: dict[str, Any], config: dict[str, Any
                 },
             )
             entry["paths"].append(path)
-    for zid, hit in zone_hits.items():
-        zone = hit["zone"]
-        paths = sorted(set(hit["paths"]))[:12]
+    for zid, zone_hit in zone_hits.items():
+        zone = zone_hit["zone"]
+        paths = sorted(set(zone_hit["paths"]))[:12]
         findings.append(
             finding(
                 f"risk-zone-{zid}",
@@ -304,16 +317,16 @@ def analyze_manifest(root: Path, manifest: dict[str, Any], config: dict[str, Any
         for line in text.splitlines():
             diff_lines.append((path, line))
     destructive_hits: list[str] = []
-    for path, line in diff_lines:
+    for diff_path, line in diff_lines:
         for pid, pattern, title in DESTRUCTIVE_PATTERNS:
             if pattern.search(line):
                 snippet = line.strip()
                 if len(snippet) > 160:
                     snippet = snippet[:157] + "..."
-                location = f"{path}: " if path else ""
-                hit = f"{location}{title}: `{snippet}`"
-                if hit not in destructive_hits:
-                    destructive_hits.append(hit)
+                location = f"{diff_path}: " if diff_path else ""
+                dangerous_hit = f"{location}{title}: `{snippet}`"
+                if dangerous_hit not in destructive_hits:
+                    destructive_hits.append(dangerous_hit)
     if destructive_hits:
         findings.append(
             finding(
@@ -336,7 +349,7 @@ def analyze_manifest(root: Path, manifest: dict[str, Any], config: dict[str, Any
             seen.add(key)
 
     raw_score = sum(int(item.get("score") or 0) for item in deduped)
-    score = clamp(raw_score, 0, 100)
+    score = clamp(max(raw_score, severity_score_floor(deduped, thresholds)), 0, 100)
     return {
         "score": score,
         "raw_score": raw_score,

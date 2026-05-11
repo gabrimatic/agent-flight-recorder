@@ -1,9 +1,25 @@
 # Contributing
 
-Run the test suite before opening a pull request:
+Run the main check before opening a pull request:
+
+```bash
+make test
+```
+
+The direct test command is:
 
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -v
+```
+
+Recommended local verification:
+
+```bash
+make test
+uvx ruff check .
+uvx mypy src
+python -m build
+gitleaks detect --no-git --source . --redact --verbose
 ```
 
 Keep runtime dependencies at zero unless there is a strong reason. This project should stay easy to run in CI and old repositories.

@@ -110,13 +110,20 @@ def is_binary_file(path: Path, sample_size: int = 8192) -> bool:
         return True
     if not sample:
         return False
+    try:
+        sample.decode("utf-8")
+        return False
+    except UnicodeDecodeError:
+        pass
     text_chars = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(32, 127)))
     non_text = sample.translate(None, text_chars)
     return len(non_text) / max(1, len(sample)) > 0.30
 
 
 def relpath(root: Path, path: Path) -> str:
-    return path.resolve().relative_to(root.resolve()).as_posix()
+    root_abs = Path(os.path.abspath(root))
+    path_abs = Path(os.path.abspath(path))
+    return path_abs.relative_to(root_abs).as_posix()
 
 
 def normalize_command(command: Iterable[str]) -> str:

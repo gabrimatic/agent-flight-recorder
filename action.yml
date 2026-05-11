@@ -42,7 +42,7 @@ runs:
         fi
 
         AFR_BIN="$GITHUB_ACTION_PATH/afr.py"
-        python "$AFR_BIN" init || true
+        python "$AFR_BIN" init
 
         if [ -n "$MANIFEST_INPUT" ]; then
           if [ ! -f "$MANIFEST_INPUT" ]; then

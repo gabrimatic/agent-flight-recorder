@@ -57,6 +57,16 @@ When `manifest` is set, the action skips fresh diff analysis, renders the markdo
 
 Use `fetch-depth: 0` with `actions/checkout`. Explicit base refs must resolve; if the ref is missing, the action fails instead of silently analyzing a partial diff.
 
+## Gate behavior
+
+`max_score` compares against the final risk score. The score includes severity floors:
+
+- medium findings make the manifest at least medium risk
+- high findings make the manifest at least high risk
+- critical findings make the manifest at least critical risk
+
+This means a failed recorded agent command fails a strict `max_score: "50"` gate even if the command made no file changes.
+
 ## Command Logs In CI
 
 `afr analyze` can analyze a PR diff, but it cannot know which commands ran locally. If you enable `require_command_log`, pass a recorded manifest with the `manifest` input.

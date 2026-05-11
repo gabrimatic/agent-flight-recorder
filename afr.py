@@ -16,7 +16,7 @@ SRC = os.path.join(ROOT, "src")
 if SRC not in sys.path:
     sys.path.insert(0, SRC)
 
-from agent_flight_recorder.cli import main
+from agent_flight_recorder.cli import main  # noqa: E402
 
 if __name__ == "__main__":
     raise SystemExit(main())

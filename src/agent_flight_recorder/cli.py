@@ -16,17 +16,15 @@ from .config import load_config
 from .report import render_markdown
 from .session import (
     analyze_repository,
-    ensure_project,
     init_project,
     load_manifest,
     run_command_in_active_session,
     run_wrapped_session,
-    save_manifest,
     session_status,
     start_manual_session,
     stop_session,
 )
-from .utils import atomic_write_text, json_dump
+from .utils import atomic_write_text
 
 
 LEVEL_TO_SCORE = {

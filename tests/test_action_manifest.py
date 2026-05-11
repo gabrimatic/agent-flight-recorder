@@ -19,6 +19,11 @@ class ActionManifestTests(unittest.TestCase):
         self.assertIn('report --manifest "$MANIFEST_INPUT"', action)
         self.assertIn('VERIFY_ARGS=(--manifest "$MANIFEST_INPUT"', action)
 
+    def test_action_does_not_ignore_init_failures(self) -> None:
+        action = (ROOT / "action.yml").read_text(encoding="utf-8")
+        self.assertIn('python "$AFR_BIN" init', action)
+        self.assertNotIn('python "$AFR_BIN" init || true', action)
+
 
 if __name__ == "__main__":
     unittest.main()

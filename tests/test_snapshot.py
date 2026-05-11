@@ -24,6 +24,26 @@ class SnapshotTests(unittest.TestCase):
             self.assertEqual(by_path["a.py"], "M")
             self.assertEqual(by_path["b.py"], "A")
 
+    def test_inventory_preserves_symlink_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "target.py").write_text("print(1)\n", encoding="utf-8")
+            before = inventory(root, default_config())
+            os.symlink("target.py", root / "target-link.py")
+            after = inventory(root, default_config())
+            changes = compare_inventories(before, after)
+            by_path = {item["path"]: item["status"] for item in changes}
+            self.assertEqual(by_path["target-link.py"], "A")
+            self.assertNotIn("target.py", by_path)
+
+    def test_inventory_treats_valid_utf8_text_as_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "localized.py"
+            path.write_text(("\u00fc" * 200) + "\nAPI_KEY='abcd1234abcd1234abcd1234'\n", encoding="utf-8")
+            snapshot = inventory(root, default_config())
+            self.assertFalse(snapshot["localized.py"]["binary"])
+
     def test_truncated_hashes_still_detect_same_size_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

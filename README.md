@@ -1,12 +1,20 @@
 # Agent Flight Recorder
 
-Local receipts for coding-agent code changes.
+Agent Flight Recorder (`afr`) records local receipts for coding-agent code changes.
 
-Agent Flight Recorder (`afr`) records what changed during a coding-agent session, which commands ran, which files changed, whether tests were recorded, and which risky areas need human review before merge.
+Run it around an agent, test command, or CI diff to capture what changed, which commands ran, whether tests were recorded, and which risky areas need human review before merge.
 
 It is built for the moment after you delegate work to an agent and need receipts before trusting the result.
 
 It stays local and deterministic: no runtime dependencies, no remote scoring, no hidden model judgment.
+
+## Requirements
+
+- Python 3.10+
+- git
+- a git repository
+
+Runtime dependencies: none beyond Python and git.
 
 ## What `afr` Records
 
@@ -40,7 +48,7 @@ The manifest records:
 - possible secret leaks
 - dangerous added lines such as destructive SQL or `curl | sh`
 - whether a successful test command was recorded
-- a risk score from 0 to 100
+- a risk score from 0 to 100, with severity floors for high and critical findings
 
 ## What `afr` Cannot Prove
 
@@ -50,22 +58,27 @@ It cannot observe commands that run outside `afr`. If you run `npm test` in anot
 
 It also cannot guarantee that code is safe, correct, non-malicious, or produced by the recorded process. The useful promise is narrower: it records the process you choose to run through it and turns that process into deterministic review evidence.
 
-## Install
+## Setup
 
-From a checkout:
+Preferred local checkout:
 
 ```bash
 python afr.py doctor
+python afr.py init
 ```
 
-As a Python package:
+Use the module form from a checkout:
+
+```bash
+PYTHONPATH=src python -m agent_flight_recorder doctor
+```
+
+Install as a Python package:
 
 ```bash
 pip install .
 afr doctor
 ```
-
-Runtime dependencies: none beyond Python 3.10+ and git.
 
 ## Quick start
 
@@ -79,6 +92,12 @@ Wrap a coding-agent command:
 
 ```bash
 afr start -- agent-cli
+```
+
+Wrap a real agent run:
+
+```bash
+afr start -- agent-cli --workdir "$PWD" "make the requested change, then run tests"
 ```
 
 Wrap a non-interactive command and capture logs:
@@ -190,6 +209,8 @@ afr verify --require-command-log
 
 `--max-score 79` means critical risk fails. `--max-score 50` means high and critical risk fail.
 
+Failed recorded commands are high risk even if no files changed. This keeps failed agent runs from passing strict merge gates.
+
 ### `afr report`
 
 Prints the latest markdown report, or writes markdown/JSON to a file.
@@ -258,6 +279,19 @@ When `manifest` is set, the action skips `afr analyze`, renders the report from 
 
 `require_command_log` is too strict for normal PRs where only diff analysis is expected.
 
+## Report UX
+
+`afr report` prints a markdown review surface that is meant to be pasted into a PR or read in CI logs. It includes:
+
+- risk badge, session id, mode, start/end time
+- repository branch, head, and analysis base ref
+- changed-file and command summaries
+- findings sorted by severity
+- recorded command exits and log paths
+- changed files with status, size, and binary marker
+
+The report avoids generated-by footers and keeps command output in separate redacted log files.
+
 ## Risk scoring
 
 The risk engine is deterministic and local. It does not need a remote service.
@@ -268,6 +302,8 @@ Risk levels:
 - medium: 21-50
 - high: 51-79
 - critical: 80-100
+
+The final score uses the higher of the summed finding score and the strongest severity floor. Medium findings make the manifest at least medium risk, high findings make it at least high risk, and critical findings make it at least critical risk.
 
 Signals include:
 
@@ -336,7 +372,7 @@ If you commit generated reports, inspect them first. They may contain file paths
 - Missing config, with automatic default generation.
 - Missing base refs in CI, with fallback refs.
 - Explicit invalid base refs fail instead of falling back.
-- Failed child commands, while still writing a manifest.
+- Failed child commands, while still writing a high-risk manifest.
 - Interrupted CLI, with exit code 130.
 
 ## Why This Is Different From Review Bots
@@ -355,10 +391,20 @@ Run tests:
 make test
 ```
 
-Run the full local check:
+Run the project check:
 
 ```bash
 make check
+```
+
+Run the recommended release-style check:
+
+```bash
+make test
+uvx ruff check .
+uvx mypy src
+python -m build
+gitleaks detect --no-git --source . --redact --verbose
 ```
 
 Package builds use `python -m build`; install `build` in your development environment if that module is missing.

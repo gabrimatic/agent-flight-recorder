@@ -86,6 +86,33 @@ class RiskEngineTests(unittest.TestCase):
             ids = {item["id"] for item in risk["findings"]}
             self.assertIn("source-without-recorded-tests", ids)
 
+    def test_failed_command_sets_high_risk_even_without_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = {
+                "commands": [{"command": "agent run", "argv": ["agent", "run"], "exit_code": 1}],
+                "files": {"changed": []},
+            }
+            risk = analyze_manifest(root, manifest, default_config(), diff_text="")
+            ids = {item["id"] for item in risk["findings"]}
+            self.assertIn("command-failed", ids)
+            self.assertEqual(risk["level"], "high")
+            self.assertGreaterEqual(risk["score"], 51)
+
+    def test_medium_severity_finding_sets_medium_risk_floor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "blob.bin").write_bytes(b"\0binary")
+            manifest = {
+                "commands": [],
+                "files": {"changed": [{"path": "blob.bin", "status": "A", "size": 7, "binary": True}]},
+            }
+            risk = analyze_manifest(root, manifest, default_config(), diff_text="")
+            ids = {item["id"] for item in risk["findings"]}
+            self.assertIn("binary-file-change", ids)
+            self.assertEqual(risk["level"], "medium")
+            self.assertGreaterEqual(risk["score"], 21)
+
 
 if __name__ == "__main__":
     unittest.main()

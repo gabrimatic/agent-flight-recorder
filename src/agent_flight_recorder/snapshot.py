@@ -32,7 +32,6 @@ def inventory(root: Path, config: dict[str, Any]) -> dict[str, dict[str, Any]]:
     result: dict[str, dict[str, Any]] = {}
     for dirpath, dirnames, filenames in os.walk(root):
         current = Path(dirpath)
-        current_rel = "." if current == root else relpath(root, current)
         filtered_dirs: list[str] = []
         for dirname in dirnames:
             child = current / dirname

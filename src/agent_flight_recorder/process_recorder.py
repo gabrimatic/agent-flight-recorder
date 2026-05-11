@@ -149,8 +149,8 @@ def run_command(
             out.write("[afr: output capture disabled; child inherited terminal stdout]\n")
             err.write("[afr: output capture disabled; child inherited terminal stderr]\n")
         try:
-            proc = subprocess.run(argv, cwd=str(root), env=_prepare_env(), check=False)
-            record["exit_code"] = proc.returncode
+            run_proc = subprocess.run(argv, cwd=str(root), env=_prepare_env(), check=False)
+            record["exit_code"] = run_proc.returncode
         except OSError as exc:
             exit_code, stderr = _spawn_error_message(argv, exc)
             with stderr_path.open("a", encoding="utf-8") as err:

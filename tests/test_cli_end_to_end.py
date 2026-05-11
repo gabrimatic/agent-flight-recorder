@@ -183,6 +183,20 @@ class CliEndToEndTests(unittest.TestCase):
         self.assertTrue(dangerous)
         self.assertIn("migration.sql", "\n".join(dangerous[0]["evidence"]))
 
+    def test_analyze_scans_utf8_text_with_non_ascii_content(self) -> None:
+        run([sys.executable, str(AFR), "init"], self.repo)
+        secret = "sk-" + ("a" * 32)
+        (self.repo / "localized.py").write_text(("\u00fc" * 200) + f"\nAPI_KEY='{secret}'\n", encoding="utf-8")
+        proc = run([sys.executable, str(AFR), "analyze", "--base-ref", "HEAD"], self.repo, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        manifest_text = (self.repo / ".agent-flight" / "manifest.json").read_text(encoding="utf-8")
+        self.assertNotIn(secret, manifest_text)
+        manifest = json.loads(manifest_text)
+        changed = {item["path"]: item for item in manifest["files"]["changed"]}
+        self.assertFalse(changed["localized.py"]["binary"])
+        ids = {item["id"] for item in manifest["risk"]["findings"]}
+        self.assertIn("possible-secret-leak", ids)
+
 
 if __name__ == "__main__":
     unittest.main()
