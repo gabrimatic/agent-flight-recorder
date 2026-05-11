@@ -164,9 +164,10 @@ Analyzes the current git diff without an active session. This is best for CI.
 ```bash
 afr analyze --base-ref origin/main
 afr analyze --output .agent-flight/pr-report.md
+afr analyze --base-ref origin/main --json --output manifest.json
 ```
 
-If no base ref is provided, `afr` tries `AFR_BASE_REF`, then `origin/main`, `origin/master`, `main`, `master`, then `HEAD~1`.
+If no base ref is provided, `afr` tries `AFR_BASE_REF`, then `origin/main`, `origin/master`, `main`, `master`, then `HEAD~1`. If you pass a base ref explicitly, it must resolve; a typo fails instead of silently analyzing the wrong range.
 
 ### `afr verify`
 
@@ -289,6 +290,8 @@ Important keys:
 }
 ```
 
+Config validation is strict. List fields must contain strings, byte limits and thresholds must be integers, and each risk zone needs an `id` plus a string-list `patterns` value.
+
 ## Privacy and security
 
 - Session data is local by default.
@@ -312,6 +315,7 @@ If you commit generated reports, inspect them first. They may contain file paths
 - Large files with hash truncation.
 - Missing config, with automatic default generation.
 - Missing base refs in CI, with fallback refs.
+- Explicit invalid base refs fail instead of falling back.
 - Failed child commands, while still writing a manifest.
 - Interrupted CLI, with exit code 130.
 
@@ -328,6 +332,14 @@ Run tests:
 ```bash
 make test
 ```
+
+Run the full local check:
+
+```bash
+make check
+```
+
+Package builds use `python -m build`; install `build` in your development environment if that module is missing.
 
 Run directly from source:
 

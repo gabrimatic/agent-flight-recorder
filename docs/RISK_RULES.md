@@ -57,6 +57,8 @@ Previews are redacted.
 
 Triggers on added diff lines containing suspicious destructive patterns such as `DROP TABLE`, `TRUNCATE TABLE`, `DELETE FROM table;`, `chmod 777`, `curl | sh`, or dangerous `rm -rf` patterns.
 
+Untracked added files are scanned as added content when they appear in the manifest.
+
 ### `command-failed`
 
 Triggers when a recorded command exits non-zero.

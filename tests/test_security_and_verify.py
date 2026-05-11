@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_flight_recorder.config import load_config
+from agent_flight_recorder.exceptions import ConfigError
 from agent_flight_recorder.report import render_markdown
 from agent_flight_recorder.secrets import find_secrets_in_text, redact_text
 
@@ -71,6 +73,68 @@ class SecurityAndVerifyTests(unittest.TestCase):
             data = json.loads(proc.stdout)
             self.assertFalse(data["config_exists"])
             self.assertFalse((repo / ".agent-flight" / "config.json").exists())
+
+    def test_invalid_config_reports_actionable_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = Path(tmp) / "config.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "max_text_scan_bytes": 0,
+                        "risk_zones": [
+                            {
+                                "id": "broken",
+                                "patterns": "not-a-list",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ConfigError, "max_text_scan_bytes"):
+                load_config(config_path)
+
+    def test_invalid_risk_zone_patterns_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = Path(tmp) / "config.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "risk_zones": [
+                            {
+                                "id": "broken",
+                                "severity": "high",
+                                "score": 10,
+                                "patterns": "not-a-list",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ConfigError, "risk_zones\\[0\\]\\.patterns"):
+                load_config(config_path)
+
+    def test_invalid_risk_zone_severity_type_is_rejected_cleanly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = Path(tmp) / "config.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "risk_zones": [
+                            {
+                                "id": "broken",
+                                "severity": ["high"],
+                                "score": 10,
+                                "patterns": ["**/auth/**"],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ConfigError, "risk_zones\\[0\\]\\.severity"):
+                load_config(config_path)
 
     def test_verify_fails_when_threshold_exceeded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

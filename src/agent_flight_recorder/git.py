@@ -87,8 +87,9 @@ def diff_text(root: Path, base_ref: str | None = None, max_bytes: int = 2_000_00
     text = ""
     if base_ref:
         proc = run_git(root, ["diff", "--unified=0", "--no-ext-diff", f"{base_ref}...HEAD"], check=False)
-        if proc.returncode == 0:
-            text = proc.stdout
+        if proc.returncode != 0:
+            raise GitError(f"Unable to diff against base ref {base_ref}: {proc.stderr.strip() or proc.stdout.strip()}")
+        text = proc.stdout
         worktree = _worktree_diff_text(root)
         if worktree:
             text = text + "\n" + worktree
@@ -132,8 +133,9 @@ def changed_files_from_git(root: Path, base_ref: str | None = None) -> list[dict
     parsed: list[dict[str, str]] = []
     if base_ref:
         proc = run_git(root, ["diff", "--name-status", "--find-renames", "-z", f"{base_ref}...HEAD"], check=False)
-        if proc.returncode == 0:
-            parsed.extend(parse_name_status_z(proc.stdout))
+        if proc.returncode != 0:
+            raise GitError(f"Unable to diff against base ref {base_ref}: {proc.stderr.strip() or proc.stdout.strip()}")
+        parsed.extend(parse_name_status_z(proc.stdout))
     proc = run_git(root, ["diff", "--name-status", "--find-renames", "-z"], check=False)
     parsed.extend(parse_name_status_z(proc.stdout if proc.returncode == 0 else ""))
     proc_cached = run_git(root, ["diff", "--cached", "--name-status", "--find-renames", "-z"], check=False)

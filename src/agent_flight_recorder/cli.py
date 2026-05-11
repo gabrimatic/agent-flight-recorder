@@ -133,7 +133,11 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     risk = manifest.get("risk") or {}
     print(f"Analysis session: {manifest['session_id']}")
     print(f"Risk: {risk.get('level')} ({risk.get('score')}/100)")
-    print(f"Report: {args.output or latest_report_path(root)}")
+    if args.output and args.json:
+        print(f"Output: {args.output}")
+        print(f"Report: {latest_report_path(root)}")
+    else:
+        print(f"Report: {args.output or latest_report_path(root)}")
     return 0
 
 

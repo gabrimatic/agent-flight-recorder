@@ -94,6 +94,22 @@ class CliEndToEndTests(unittest.TestCase):
         verify = run([sys.executable, str(AFR), "verify", "--max-score", "100"], self.repo, check=False)
         self.assertEqual(verify.returncode, 0, verify.stderr)
 
+    def test_analyze_invalid_base_ref_fails_instead_of_falling_back(self) -> None:
+        run([sys.executable, str(AFR), "init"], self.repo)
+        proc = run([sys.executable, str(AFR), "analyze", "--base-ref", "missing/ref"], self.repo, check=False)
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("Unable to diff against base ref missing/ref", proc.stderr)
+
+    def test_analyze_json_output_labels_json_as_output(self) -> None:
+        run([sys.executable, str(AFR), "init"], self.repo)
+        output_path = self.repo / "manifest-out.json"
+        proc = run([sys.executable, str(AFR), "analyze", "--base-ref", "HEAD", "--json", "--output", str(output_path)], self.repo)
+        self.assertTrue(output_path.exists())
+        data = json.loads(output_path.read_text(encoding="utf-8"))
+        self.assertEqual(data["mode"], "analysis")
+        self.assertIn(f"Output: {output_path}", proc.stdout)
+        self.assertIn("Report:", proc.stdout)
+
     def test_analyze_base_ref_includes_worktree_diff_text(self) -> None:
         run([sys.executable, str(AFR), "init"], self.repo)
         (self.repo / "app.py").write_text("import os\nos.system('rm -rf /')\n", encoding="utf-8")

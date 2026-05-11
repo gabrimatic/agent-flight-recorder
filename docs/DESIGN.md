@@ -32,6 +32,8 @@ Main modules:
 
 `afr analyze` does not need a before-inventory. It asks git for the diff against a base ref and runs the risk engine. This is the right mode for GitHub Actions.
 
+Explicit base refs are fail-closed. If git cannot diff against the requested ref, `afr` exits with a user-facing error instead of falling back to a smaller working-tree-only analysis.
+
 ## Why inventory instead of only git diff?
 
 Git diff is excellent in CI but not enough for a local agent session because a developer may create untracked files, generated artifacts, symlinks, or binary files. The inventory approach catches these. Git diff is still used for added-line risk checks.
