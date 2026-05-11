@@ -7,6 +7,10 @@ inputs:
     description: Git ref to diff against. Defaults to origin/$GITHUB_BASE_REF on pull requests, then Agent Flight Recorder fallback refs.
     required: false
     default: ""
+  manifest:
+    description: Existing manifest to verify. When set, analysis is skipped and the report is rendered from this manifest.
+    required: false
+    default: ""
   max_score:
     description: Fail when risk score is greater than this value.
     required: false
@@ -32,6 +36,7 @@ runs:
       run: |
         set -euo pipefail
         BASE_REF="${{ inputs.base_ref }}"
+        MANIFEST_INPUT="${{ inputs.manifest }}"
         if [ -z "$BASE_REF" ] && [ -n "${GITHUB_BASE_REF:-}" ]; then
           BASE_REF="origin/${GITHUB_BASE_REF}"
         fi
@@ -39,13 +44,22 @@ runs:
         AFR_BIN="$GITHUB_ACTION_PATH/afr.py"
         python "$AFR_BIN" init || true
 
-        if [ -n "$BASE_REF" ]; then
-          python "$AFR_BIN" analyze --base-ref "$BASE_REF" --output "${{ inputs.output }}"
+        if [ -n "$MANIFEST_INPUT" ]; then
+          if [ ! -f "$MANIFEST_INPUT" ]; then
+            echo "::error::Agent Flight manifest not found: $MANIFEST_INPUT"
+            exit 2
+          fi
+          python "$AFR_BIN" report --manifest "$MANIFEST_INPUT" --output "${{ inputs.output }}"
         else
-          python "$AFR_BIN" analyze --output "${{ inputs.output }}"
+          if [ -n "$BASE_REF" ]; then
+            python "$AFR_BIN" analyze --base-ref "$BASE_REF" --output "${{ inputs.output }}"
+          else
+            python "$AFR_BIN" analyze --output "${{ inputs.output }}"
+          fi
+          MANIFEST_INPUT=".agent-flight/manifest.json"
         fi
 
-        VERIFY_ARGS=(--manifest .agent-flight/manifest.json --max-score "${{ inputs.max_score }}")
+        VERIFY_ARGS=(--manifest "$MANIFEST_INPUT" --max-score "${{ inputs.max_score }}")
         if [ "${{ inputs.require_tests_for_high_risk }}" = "true" ]; then
           VERIFY_ARGS+=(--require-tests-for-high-risk)
         fi

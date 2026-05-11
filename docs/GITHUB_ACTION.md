@@ -29,12 +29,27 @@ jobs:
         with:
           max_score: "50"
           require_tests_for_high_risk: "true"
+```
+
+## Recorded-session workflow
+
+Use this when a previous step has produced or downloaded a manifest from a recorded `afr start` or `afr run` session:
+
+```yaml
+      - uses: gabrimatic/agent-flight-recorder@v0
+        with:
+          manifest: path/to/manifest.json
+          max_score: "50"
+          require_tests_for_high_risk: "true"
           require_command_log: "true"
 ```
+
+When `manifest` is set, the action skips fresh diff analysis, renders the markdown report from that manifest, and verifies the manifest directly.
 
 ## Inputs
 
 - `base_ref`: optional git ref. Defaults to `origin/$GITHUB_BASE_REF` for pull requests.
+- `manifest`: optional existing manifest path. When set, analysis is skipped and this manifest is verified.
 - `max_score`: fail when risk score is greater than this value. Default: `79`.
 - `require_tests_for_high_risk`: fail high/critical manifests with no recorded successful test command.
 - `require_command_log`: fail changed manifests with no recorded command log.
@@ -44,4 +59,4 @@ Use `fetch-depth: 0` with `actions/checkout`. Explicit base refs must resolve; i
 
 ## Important note about command logs in CI
 
-`afr analyze` can analyze a PR diff, but it cannot know what commands a developer ran locally. If you enable `require_command_log`, developers need to create a manifest by running agent work through `afr start` or `afr run`, then preserve/provide that manifest in your workflow. For many teams, the best initial CI setting is `require_command_log: false`.
+`afr analyze` can analyze a PR diff, but it cannot know what commands a developer ran locally. If you enable `require_command_log`, pass a recorded manifest with the `manifest` input. For many teams, the best initial CI setting is `require_command_log: false`.

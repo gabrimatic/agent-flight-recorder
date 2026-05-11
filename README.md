@@ -233,10 +233,20 @@ For stricter teams:
         with:
           max_score: "50"
           require_tests_for_high_risk: "true"
+```
+
+To verify a pre-recorded session manifest instead of analyzing the current diff:
+
+```yaml
+      - uses: gabrimatic/agent-flight-recorder@v0
+        with:
+          manifest: path/to/manifest.json
+          max_score: "50"
+          require_tests_for_high_risk: "true"
           require_command_log: "true"
 ```
 
-`require_command_log` is strict. It is useful when your team expects agent sessions to be recorded with `afr start` or `afr run`; it is too strict for normal PRs where only diff analysis is expected.
+When `manifest` is set, the action skips `afr analyze`, renders the report from that manifest, and verifies the recorded commands. This is the mode to use when your team expects agent sessions to be recorded with `afr start` or `afr run`. `require_command_log` is too strict for normal PRs where only diff analysis is expected.
 
 ## Risk scoring
 
@@ -280,7 +290,7 @@ Important keys:
   "max_text_scan_bytes": 2000000,
   "redact_command_output": true,
   "exclude_globs": [".git/**", ".agent-flight/**", "node_modules/**", "build/**"],
-  "test_command_patterns": ["pytest", "npm test", "go test", "flutter test"],
+  "test_command_patterns": ["pytest", "npm test", "make test", "go test", "flutter test"],
   "test_file_globs": ["tests/**", "**/*.test.*", "**/*_test.*"],
   "risk_thresholds": {
     "medium": 21,

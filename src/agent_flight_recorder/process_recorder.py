@@ -118,7 +118,36 @@ def command_looks_like_test(command: dict[str, Any], patterns: list[str]) -> boo
         p = str(pattern).lower()
         if p in text or p in joined:
             return True
+    if _task_runner_looks_like_test(argv):
+        return True
     # Lightweight fallback: commands such as `pytest tests/foo.py` or `npm run test:unit`.
     if "test" in joined and any(token in joined for token in ["pytest", "npm", "yarn", "pnpm", "bun", "go", "cargo", "flutter", "dart", "gradle", "mvn", "dotnet"]):
         return True
+    return False
+
+
+def _task_runner_looks_like_test(argv: list[str]) -> bool:
+    if not argv:
+        return False
+    executable = Path(argv[0]).name
+    if executable in {"tox", "nox"}:
+        return True
+    if executable not in {"make", "gmake", "just", "task"}:
+        return False
+    options_with_values = {"-c", "-f", "--directory", "--file", "--makefile"}
+    skip_next = False
+    for token in argv[1:]:
+        if skip_next:
+            skip_next = False
+            continue
+        if token in options_with_values:
+            skip_next = True
+            continue
+        if token.startswith("-"):
+            continue
+        target = token.strip().replace("_", "-")
+        if target in {"test", "tests", "check", "ci"}:
+            return True
+        if target.startswith(("test-", "test:", "tests-", "tests:", "check-", "check:")):
+            return True
     return False

@@ -50,6 +50,42 @@ class RiskEngineTests(unittest.TestCase):
             ids = {item["id"] for item in risk["findings"]}
             self.assertNotIn("source-without-recorded-tests", ids)
 
+    def test_make_test_counts_as_successful_test_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "app.py").write_text("print('x')\n", encoding="utf-8")
+            manifest = {
+                "commands": [{"command": "make test", "argv": ["make", "test"], "exit_code": 0}],
+                "files": {"changed": [{"path": "app.py", "status": "M", "size": 11, "binary": False}]},
+            }
+            risk = analyze_manifest(root, manifest, default_config(), diff_text="")
+            ids = {item["id"] for item in risk["findings"]}
+            self.assertNotIn("source-without-recorded-tests", ids)
+
+    def test_make_test_with_directory_option_counts_as_successful_test_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "app.py").write_text("print('x')\n", encoding="utf-8")
+            manifest = {
+                "commands": [{"command": "make -C app test", "argv": ["make", "-C", "app", "test"], "exit_code": 0}],
+                "files": {"changed": [{"path": "app.py", "status": "M", "size": 11, "binary": False}]},
+            }
+            risk = analyze_manifest(root, manifest, default_config(), diff_text="")
+            ids = {item["id"] for item in risk["findings"]}
+            self.assertNotIn("source-without-recorded-tests", ids)
+
+    def test_make_build_does_not_count_as_successful_test_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "app.py").write_text("print('x')\n", encoding="utf-8")
+            manifest = {
+                "commands": [{"command": "make build", "argv": ["make", "build"], "exit_code": 0}],
+                "files": {"changed": [{"path": "app.py", "status": "M", "size": 11, "binary": False}]},
+            }
+            risk = analyze_manifest(root, manifest, default_config(), diff_text="")
+            ids = {item["id"] for item in risk["findings"]}
+            self.assertIn("source-without-recorded-tests", ids)
+
 
 if __name__ == "__main__":
     unittest.main()

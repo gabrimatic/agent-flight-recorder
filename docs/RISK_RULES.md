@@ -43,6 +43,8 @@ Triggers when source files changed but no successful recorded test command was f
 
 A successful test command is any recorded command whose text matches configured patterns and whose exit code is zero.
 
+Default patterns include common direct test runners and project task wrappers such as `pytest`, `npm test`, `make test`, `make check`, `just test`, `task test`, `tox`, and `nox`. The detector also recognizes task-runner targets with options, such as `make -C app test`.
+
 ### `source-without-test-file-change`
 
 Triggers when source changed but no test files changed. This is medium severity because existing tests may already cover the behavior.

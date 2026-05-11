@@ -12,6 +12,13 @@ class ActionManifestTests(unittest.TestCase):
         action = (ROOT / "action.yml").read_text(encoding="utf-8")
         self.assertNotIn("${{ github.", action)
 
+    def test_action_can_verify_existing_manifest_without_reanalyzing(self) -> None:
+        action = (ROOT / "action.yml").read_text(encoding="utf-8")
+        self.assertIn("manifest:", action)
+        self.assertIn('MANIFEST_INPUT="${{ inputs.manifest }}"', action)
+        self.assertIn('report --manifest "$MANIFEST_INPUT"', action)
+        self.assertIn('VERIFY_ARGS=(--manifest "$MANIFEST_INPUT"', action)
+
 
 if __name__ == "__main__":
     unittest.main()
