@@ -1,8 +1,8 @@
 # Design
 
-Agent Flight Recorder is intentionally small and deterministic.
+Agent Flight Recorder is small on purpose.
 
-The tool avoids runtime dependencies so it can run inside CI, inside old repositories, and on developer machines without a package-manager fight. It uses Python standard library APIs plus git.
+It avoids runtime dependencies so it can run in CI, inside old repositories, and on machines where package managers are already enough work. The implementation uses Python standard library APIs plus git.
 
 ## Architecture
 
@@ -22,33 +22,33 @@ Main modules:
 
 ### Manual
 
-`afr start` creates an active session and captures a before-inventory. `afr run -- <command>` records commands. `afr stop` captures the after-inventory, compares changes, runs the risk engine, and writes outputs.
+`afr start` creates an active session and captures a before-inventory. `afr run -- <command>` records commands. `afr stop` captures the after-inventory, compares changes, runs the risk engine, and writes the manifest and report.
 
 ### Wrapped command
 
-`afr start -- <command>` captures before-inventory, runs one command, captures after-inventory, runs risk analysis, and exits with the child command exit code.
+`afr start -- <command>` captures the before-inventory, runs one command, captures the after-inventory, runs risk analysis, and exits with the child command exit code.
 
-Command metadata is stored in a publishable form. `argv` and the normalized command string are redacted before they are written to manifests or markdown reports. The original argv is only used to launch the child process.
+Command metadata is stored in a publishable form. `argv` and the normalized command string are redacted before they are written to manifests or markdown reports. The original argv is used only to launch the child process.
 
-Captured stdout and stderr are drained through bounded in-memory buffers, redacted, then written to log files. The default cap is `max_command_output_bytes` per stream. This prevents large command output from exhausting memory and makes truncation visible in the logs.
+Captured stdout and stderr are drained through bounded in-memory buffers, redacted, then written to log files. The default cap is `max_command_output_bytes` per stream. Large command output cannot grow memory without a visible truncation marker.
 
 ### Analysis
 
-`afr analyze` does not need a before-inventory. It asks git for the diff against a base ref and runs the risk engine. This is the right mode for GitHub Actions.
+`afr analyze` does not need a before-inventory. It asks git for the diff against a base ref and runs the risk engine. This is the GitHub Actions path.
 
-Explicit base refs are fail-closed. If git cannot diff against the requested ref, `afr` exits with a user-facing error instead of falling back to a smaller working-tree-only analysis.
+Explicit base refs are fail-closed. If git cannot diff against the requested ref, `afr` exits with a clear error instead of falling back to a smaller working-tree-only analysis.
 
-## Why inventory instead of only git diff?
+## Why Inventory Exists
 
-Git diff is excellent in CI but not enough for a local agent session because a developer may create untracked files, generated artifacts, symlinks, or binary files. The inventory approach catches these. Git diff is still used for added-line risk checks.
+Git diff works well in CI, but it is not enough for a local agent session. A session can create untracked files, generated artifacts, symlinks, or binary files. The inventory catches those, while git diff still handles added-line risk checks.
 
-## Why deterministic rules first?
+## Why Deterministic Rules Come First
 
-The first version should be trusted because it is predictable. A future hosted product could add generated explanations, but the base risk gate should not depend on non-deterministic behavior.
+The merge gate should be predictable. A future hosted product could add generated explanations, but the default gate should not depend on non-deterministic behavior.
 
 ## Manifest schema
 
-The manifest is JSON and intentionally human-readable. Important sections:
+The manifest is JSON and intentionally readable. Important sections:
 
 - `repository`: branch, head, before/after status.
 - `commands`: redacted argv, redacted normalized command string, exit code, timestamps, output paths, truncation flags.
@@ -60,11 +60,11 @@ The manifest is JSON and intentionally human-readable. Important sections:
 
 - `0`: success.
 - `1`: verify failed.
-- `2`: user-facing CLI/config/git/session error.
+- `2`: CLI/config/git/session error.
 - `130`: interrupted.
 
 ## Known constraints
 
-`afr` cannot observe commands run outside the recorder. This is deliberate and documented. Recording shells transparently is possible but invasive, shell-specific, and fragile.
+`afr` cannot observe commands run outside the recorder. That boundary is deliberate. Transparent shell recording is possible, but it is invasive, shell-specific, and fragile.
 
 Local inventory hashes large files only up to `max_hash_bytes` for performance. For files whose hashes are truncated, inventory comparison also uses modification time so same-size edits beyond the hash cap are still surfaced for review.

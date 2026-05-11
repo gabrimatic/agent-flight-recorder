@@ -1,6 +1,6 @@
 # Security policy
 
-Agent Flight Recorder is a local developer tool. It does not make network calls and has no runtime third-party dependencies.
+Agent Flight Recorder is a local CLI. It does not make network calls and has no runtime third-party dependencies.
 
 ## Sensitive data handling
 
@@ -11,7 +11,7 @@ Agent Flight Recorder is a local developer tool. It does not make network calls 
 - Generated session data is ignored by `.agent-flight/.gitignore`.
 - Reports may still include file paths, command names, branch names, and other sensitive project metadata.
 
-Before publishing a report, inspect it.
+Inspect reports before publishing them.
 
 ## Reporting vulnerabilities
 
@@ -19,4 +19,4 @@ Open a private security advisory or contact the maintainer privately if this rep
 
 ## Scope
 
-The tool is not a sandbox. It runs commands you ask it to run. Do not run untrusted commands through it expecting containment.
+The tool is not a sandbox. It runs the commands you pass to it. Do not run untrusted commands through it expecting containment.

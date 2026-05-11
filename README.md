@@ -1,12 +1,14 @@
 # Agent Flight Recorder
 
-Black-box recorder for coding-agent code changes.
+Local receipts for coding-agent code changes.
 
-Agent Flight Recorder (`afr`) records what changed during a coding-agent session, what commands were run, which files were touched, whether tests were recorded, and which risky areas need human review before merge.
+Agent Flight Recorder (`afr`) records what changed during a coding-agent session, which commands ran, which files changed, whether tests were recorded, and which risky areas need human review before merge.
 
-It is built for the new workflow where a developer says “let the agent implement this,” then needs receipts before trusting the result.
+It is built for the moment after you delegate work to an agent and need receipts before trusting the result.
 
-## What it does
+It stays local and deterministic: no runtime dependencies, no remote scoring, no hidden model judgment.
+
+## What `afr` Records
 
 `afr` creates a local `.agent-flight` folder containing:
 
@@ -40,11 +42,13 @@ The manifest records:
 - whether a successful test command was recorded
 - a risk score from 0 to 100
 
-## What it does not pretend to do
+## What `afr` Cannot Prove
 
-Agent Flight Recorder is a review aid, not a proof of correctness.
+Agent Flight Recorder is review evidence, not proof that a change is correct.
 
-It cannot observe commands that are run outside `afr`. If a developer runs `npm test` in another terminal without `afr run -- npm test`, the manifest will not know. It also cannot guarantee that code is safe, correct, non-malicious, or produced by the recorded process. The useful guarantee is narrower: it records the process you choose to run through it and produces deterministic review evidence.
+It cannot observe commands that run outside `afr`. If you run `npm test` in another terminal without `afr run -- npm test`, the manifest will not know.
+
+It also cannot guarantee that code is safe, correct, non-malicious, or produced by the recorded process. The useful promise is narrower: it records the process you choose to run through it and turns that process into deterministic review evidence.
 
 ## Install
 
@@ -143,7 +147,9 @@ afr start --interactive -- agent-cli
 
 When `--interactive` is used, the command inherits the terminal. The command line and exit code are still recorded, but stdout/stderr are not captured.
 
-Recorded command metadata is redacted before it is written to the manifest. Secret-looking flag values such as `--api-key <value>`, `--token=<value>`, `PASSWORD=<value>`, and common key formats are replaced in reports and manifests. Captured stdout and stderr are capped by `max_command_output_bytes` in `.agent-flight/config.json`; truncated logs include an explicit `[afr: ... truncated ...]` marker.
+Recorded command metadata is redacted before it is written to the manifest. Secret-looking flag values such as `--api-key <value>`, `--token=<value>`, `PASSWORD=<value>`, and common key formats are replaced in reports and manifests.
+
+Captured stdout and stderr are capped by `max_command_output_bytes` in `.agent-flight/config.json`. Truncated logs include an explicit `[afr: ... truncated ...]` marker.
 
 ### `afr run`
 
@@ -228,7 +234,7 @@ jobs:
           require_command_log: "false"
 ```
 
-For stricter teams:
+For a stricter gate:
 
 ```yaml
       - uses: gabrimatic/agent-flight-recorder@v0
@@ -248,11 +254,13 @@ To verify a pre-recorded session manifest instead of analyzing the current diff:
           require_command_log: "true"
 ```
 
-When `manifest` is set, the action skips `afr analyze`, renders the report from that manifest, and verifies the recorded commands. This is the mode to use when your team expects agent sessions to be recorded with `afr start` or `afr run`. `require_command_log` is too strict for normal PRs where only diff analysis is expected.
+When `manifest` is set, the action skips `afr analyze`, renders the report from that manifest, and verifies the recorded commands. Use this mode when agent sessions are expected to be recorded with `afr start` or `afr run`.
+
+`require_command_log` is too strict for normal PRs where only diff analysis is expected.
 
 ## Risk scoring
 
-The risk engine is deterministic. It does not need a remote service.
+The risk engine is deterministic and local. It does not need a remote service.
 
 Risk levels:
 
@@ -278,11 +286,11 @@ Signals include:
 - failed recorded commands
 - no command log
 
-All rules can be adjusted in `.agent-flight/config.json`.
+Adjust rules in `.agent-flight/config.json`.
 
 ## Configuration
 
-Default config is created by `afr init`.
+`afr init` creates the default config.
 
 Important keys:
 
@@ -306,7 +314,7 @@ Config validation is strict. List fields must contain strings, byte limits and t
 
 ## Privacy and security
 
-- Session data is local by default.
+- Session data stays local by default.
 - `.agent-flight/sessions/`, `.agent-flight/manifest.json`, and active-session state are ignored by `.agent-flight/.gitignore`.
 - Command stdout/stderr are redacted by default using local regex rules.
 - Changed files are scanned locally for possible secrets.
@@ -331,11 +339,13 @@ If you commit generated reports, inspect them first. They may contain file paths
 - Failed child commands, while still writing a manifest.
 - Interrupted CLI, with exit code 130.
 
-## Why this is different from code review bots
+## Why This Is Different From Review Bots
 
 Most bots look only at the final diff.
 
-Agent Flight Recorder records the surrounding process: what command was delegated, what changed, what validation ran, and what risky areas deserve human attention. It is provenance and merge-gate evidence for coding-agent development.
+Agent Flight Recorder records the surrounding process: what command was delegated, what changed, what validation ran, and which risky areas deserve human attention.
+
+That does not make the change safe. It gives the reviewer the missing context.
 
 ## Development
 

@@ -1,7 +1,7 @@
 """Agent Flight Recorder.
 
-A small, dependency-free CLI that records coding-agent code-change sessions and
-turns them into auditable manifests and pull-request reports.
+A dependency-free CLI that records coding-agent code-change sessions and turns
+them into auditable manifests and pull-request reports.
 """
 
 __all__ = ["__version__"]

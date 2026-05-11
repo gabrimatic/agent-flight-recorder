@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-flight-recorder"
 version = "0.1.0"
-description = "Black-box recorder for coding-agent code changes."
+description = "Local receipts for coding-agent code changes."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

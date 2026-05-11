@@ -17,4 +17,4 @@ Good contribution areas:
 - safer redaction
 - clearer docs
 
-Avoid adding opaque non-deterministic behavior to the core merge gate. Deterministic checks should remain the default.
+Avoid opaque non-deterministic behavior in the core merge gate. Deterministic checks should remain the default.

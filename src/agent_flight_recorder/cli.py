@@ -202,7 +202,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="afr",
-        description="Black-box recorder for coding-agent code changes.",
+        description="Local receipts for coding-agent code changes.",
     )
     parser.add_argument("--version", action="store_true", help="Print version and exit.")
     sub = parser.add_subparsers(dest="command_name")

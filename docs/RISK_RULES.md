@@ -1,6 +1,6 @@
 # Risk rules
 
-The risk engine is heuristic and deterministic. It is designed to surface review risk, not to prove correctness.
+The risk engine is deterministic. It surfaces review risk; it does not prove correctness.
 
 ## Levels
 
@@ -9,7 +9,7 @@ The risk engine is heuristic and deterministic. It is designed to surface review
 - high: 51-79
 - critical: 80-100
 
-Thresholds are configurable in `.agent-flight/config.json`.
+Set thresholds in `.agent-flight/config.json`.
 
 ## Built-in findings
 
@@ -41,9 +41,9 @@ Triggers on dependency manifests and lockfiles.
 
 Triggers when source files changed but no successful recorded test command was found.
 
-A successful test command is any recorded command whose text matches configured patterns and whose exit code is zero.
+A successful test command is any recorded command whose text matches configured patterns and exits with code zero.
 
-Default patterns include common direct test runners and project task wrappers such as `pytest`, `npm test`, `make test`, `make check`, `just test`, `task test`, `tox`, and `nox`. The detector also recognizes task-runner targets with options, such as `make -C app test`.
+Default patterns include direct test runners and project task wrappers such as `pytest`, `npm test`, `make test`, `make check`, `just test`, `task test`, `tox`, and `nox`. The detector also recognizes task-runner targets with options, such as `make -C app test`.
 
 ### `source-without-test-file-change`
 

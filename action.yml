@@ -1,5 +1,5 @@
 name: Agent Flight Recorder
-description: Analyze coding-agent code changes and fail pull requests that exceed configured risk gates.
+description: Record coding-agent change evidence and fail pull requests above configured risk gates.
 author: Soroush Yousefpour / Gabrimatic
 
 inputs:
@@ -12,15 +12,15 @@ inputs:
     required: false
     default: ""
   max_score:
-    description: Fail when risk score is greater than this value.
+    description: Fail when the risk score is greater than this value.
     required: false
     default: "79"
   require_tests_for_high_risk:
-    description: Fail high/critical changes if no successful test command was recorded in the manifest.
+    description: Fail high/critical changes without a successful recorded test command.
     required: false
     default: "false"
   require_command_log:
-    description: Fail changed manifests that have no recorded command log.
+    description: Fail changed manifests with no recorded command log.
     required: false
     default: "false"
   output:

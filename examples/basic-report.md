@@ -1,6 +1,6 @@
-# Example report shape
+# Basic Report Example
 
-Create a real report:
+Create a report from a recorded command:
 
 ```bash
 afr start -- python scripts/change.py

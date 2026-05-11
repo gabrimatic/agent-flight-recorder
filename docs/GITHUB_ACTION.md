@@ -1,6 +1,6 @@
 # GitHub Action usage
 
-Agent Flight Recorder includes a composite action at `action.yml`.
+Agent Flight Recorder ships a composite action at `action.yml`.
 
 ## Basic workflow
 
@@ -57,6 +57,8 @@ When `manifest` is set, the action skips fresh diff analysis, renders the markdo
 
 Use `fetch-depth: 0` with `actions/checkout`. Explicit base refs must resolve; if the ref is missing, the action fails instead of silently analyzing a partial diff.
 
-## Important note about command logs in CI
+## Command Logs In CI
 
-`afr analyze` can analyze a PR diff, but it cannot know what commands a developer ran locally. If you enable `require_command_log`, pass a recorded manifest with the `manifest` input. For many teams, the best initial CI setting is `require_command_log: false`.
+`afr analyze` can analyze a PR diff, but it cannot know which commands ran locally. If you enable `require_command_log`, pass a recorded manifest with the `manifest` input.
+
+For most repos, start with `require_command_log: false`.
