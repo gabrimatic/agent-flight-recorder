@@ -14,7 +14,7 @@ jobs:
   agent-flight:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: gabrimatic/agent-flight-recorder@v0
@@ -34,7 +34,7 @@ jobs:
 
 ## Inputs
 
-- `base_ref`: optional git ref. Defaults to `origin/${{ github.base_ref }}` for pull requests.
+- `base_ref`: optional git ref. Defaults to `origin/$GITHUB_BASE_REF` for pull requests.
 - `max_score`: fail when risk score is greater than this value. Default: `79`.
 - `require_tests_for_high_risk`: fail high/critical manifests with no recorded successful test command.
 - `require_command_log`: fail changed manifests with no recorded command log.

@@ -4,7 +4,7 @@ author: Soroush Yousefpour / Gabrimatic
 
 inputs:
   base_ref:
-    description: Git ref to diff against. Defaults to origin/${{ github.base_ref }} on pull requests, then Agent Flight Recorder fallback refs.
+    description: Git ref to diff against. Defaults to origin/$GITHUB_BASE_REF on pull requests, then Agent Flight Recorder fallback refs.
     required: false
     default: ""
   max_score:
@@ -32,8 +32,8 @@ runs:
       run: |
         set -euo pipefail
         BASE_REF="${{ inputs.base_ref }}"
-        if [ -z "$BASE_REF" ] && [ -n "${{ github.base_ref }}" ]; then
-          BASE_REF="origin/${{ github.base_ref }}"
+        if [ -z "$BASE_REF" ] && [ -n "${GITHUB_BASE_REF:-}" ]; then
+          BASE_REF="origin/${GITHUB_BASE_REF}"
         fi
 
         AFR_BIN="$GITHUB_ACTION_PATH/afr.py"
