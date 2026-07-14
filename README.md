@@ -1,5 +1,9 @@
 # Agent Flight Recorder
 
+[![CI](https://github.com/gabrimatic/agent-flight-recorder/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrimatic/agent-flight-recorder/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/github/license/gabrimatic/agent-flight-recorder)](LICENSE) [![python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+
+> The PyPI package named `agent-flight-recorder` is a different, unrelated project; install this tool from source.
+
 Agent Flight Recorder (`afr`) records local receipts for coding-agent code changes.
 
 Run it around an agent, test command, or CI diff to capture what changed, which commands ran, whether tests were recorded, and which risky areas need human review before merge.
@@ -7,6 +11,12 @@ Run it around an agent, test command, or CI diff to capture what changed, which 
 It is built for the moment after you delegate work to an agent and need receipts before trusting the result.
 
 It stays local and deterministic: no runtime dependencies, no remote scoring, no hidden model judgment.
+
+## Install
+
+```bash
+git clone https://github.com/gabrimatic/agent-flight-recorder && cd agent-flight-recorder && pip install .
+```
 
 ## Requirements
 
